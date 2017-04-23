@@ -31,7 +31,78 @@ namespace Accord.Math.Optimization
     /// <summary>
     ///   Levenberg-Marquardt algorithm for solving Least-Squares problems.
     /// </summary>
-    /// 
+    ///
+    /// <example>
+    /// <code>
+    /// // Suppose we would like to fit a circle to the given points.
+    /// double[][] inputs = new double[][]
+    /// {
+    ///     new []{1.0, 7.0},
+    ///     new []{2.0, 6.0},
+    ///     new []{5.0, 8.0},
+    ///     new []{7.0, 7.0},
+    ///     new []{9.0, 5.0},
+    ///     new []{3.0, 7.0}
+    /// };
+    ///
+    /// // In a least squares sense, we want the distance between a point and
+    /// // the ideal circle center minus the radius to be zero.
+    /// double[] outputs = Vector.Zeros(inputs.GetColumn(0).Length);
+    ///
+    /// // Setup the solver with the Regression and Gradient functions and an
+    /// // initial solution guess. We'll solve for 3 parameters: the circle
+    /// // center and the radius.
+    /// LevenbergMarquardt lm = new LevenbergMarquardt(3)
+    /// {
+    ///     Function = (w, x) =>
+    ///     {
+    ///         double dx = w[0] - x[0];
+    ///         double dy = w[1] - x[1];
+    ///         double dr = Math.Sqrt(dx * dx + dy * dy) - w[2];
+    ///         return dr;
+    ///     },
+    ///
+    ///     Gradient = (w, x, r) =>
+    ///     {
+    ///         double dx = w[0] - x[0];
+    ///         double dy = w[1] - x[1];
+    ///         double di = Math.Sqrt(dx * dx + dy * dy);
+    ///         r[0] = dx / di;
+    ///         r[1] = dy / di;
+    ///         r[2] = -1;
+    ///     },
+    ///
+    ///     Solution = new double[] { 5.3794, 7.2532, 3.037 }
+    /// };
+    ///
+    /// // Iteratively solve for the optimal solution according to some
+    /// // convergence criteria
+    /// double error = double.MaxValue;
+    /// for (int i = 0; i < 50; i++)
+    /// {
+    ///     lm.Minimize(inputs, outputs);
+    ///     if (lm.Value < error && error - lm.Value < 1.0e-12)
+    ///     {
+    ///         break;
+    ///     }
+    ///     error = lm.Value;
+    /// }
+    /// double x = lm.Solution[0]; // 4.7398
+    /// double y = lm.Solution[1]; // 2.9835
+    /// double r = lm.Solution[2]; // 4.7142
+    /// </code>
+    /// <para>
+    ///   References:
+    ///   <list type="bullet">
+    ///     <item><description>
+    ///     <a href="https://www.emis.de/journals/BBMS/Bulletin/sup962/gander.pdf">
+    ///       "Least-Squares Fitting of Circles and Ellipses"</a> by
+    ///       Walter Gander, Gene H. Golub, and Rolf Strebel
+    ///     </description>
+    ///     </item>
+    ///   </list>
+    /// </para>
+    /// </example>
     public class LevenbergMarquardt : ILeastSquaresMethod
     {
         private const double lambdaMax = 1e25;
@@ -68,11 +139,11 @@ namespace Accord.Math.Optimization
         ///   Gets or sets a parameterized model function mapping input vectors
         ///   into output values, whose optimum parameters must be found.
         /// </summary>
-        /// 
+        ///
         /// <value>
         ///   The function to be optimized.
         /// </value>
-        /// 
+        ///
         public LeastSquaresFunction Function { get; set; }
 
 
@@ -80,24 +151,24 @@ namespace Accord.Math.Optimization
         ///   Gets or sets a function that computes the gradient vector in respect
         ///   to the function parameters, given a set of input and output values.
         /// </summary>
-        /// 
+        ///
         /// <value>
         ///   The gradient function.
         /// </value>
-        /// 
+        ///
         public LeastSquaresGradientFunction Gradient { get; set; }
 
         /// <summary>
         ///   Gets or sets parallelization options.
         /// </summary>
-        /// 
+        ///
         public ParallelOptions ParallelOptions { get; set; }
 
         /// <summary>
         ///   Gets or sets a cancellation token that can be used to
         ///   stop the learning algorithm while it is running.
         /// </summary>
-        /// 
+        ///
         public CancellationToken Token
         {
             get { return ParallelOptions.CancellationToken; }
@@ -108,7 +179,7 @@ namespace Accord.Math.Optimization
         ///   Gets the solution found, the values of the parameters which
         ///   optimizes the function, in a least squares sense.
         /// </summary>
-        /// 
+        ///
         public double[] Solution
         {
             get { return solution; }
@@ -123,9 +194,9 @@ namespace Accord.Math.Optimization
         /// <summary>
         ///   Levenberg's damping factor, also known as lambda.
         /// </summary>
-        /// 
+        ///
         /// <remarks><para>The value determines speed of learning.</para>
-        /// 
+        ///
         /// <para>Default value is <b>0.1</b>.</para>
         /// </remarks>
         ///
@@ -136,12 +207,12 @@ namespace Accord.Math.Optimization
         }
 
         /// <summary>
-        ///   Learning rate adjustment. 
+        ///   Learning rate adjustment.
         /// </summary>
-        /// 
+        ///
         /// <remarks><para>The value by which the learning rate
         /// is adjusted when searching for the minimum cost surface.</para>
-        /// 
+        ///
         /// <para>Default value is <b>10</b>.</para>
         /// </remarks>
         ///
@@ -155,11 +226,11 @@ namespace Accord.Math.Optimization
         /// <summary>
         ///   Gets the number of variables (free parameters) in the optimization problem.
         /// </summary>
-        /// 
+        ///
         /// <value>
         ///   The number of parameters.
         /// </value>
-        /// 
+        ///
         public int NumberOfVariables
         {
             get { return numberOfParameters; }
@@ -167,11 +238,11 @@ namespace Accord.Math.Optimization
 
 
         /// <summary>
-        ///   Gets or sets the number of blocks to divide the 
+        ///   Gets or sets the number of blocks to divide the
         ///   Jacobian matrix in the Hessian calculation to
         ///   preserve memory. Default is 1.
         /// </summary>
-        /// 
+        ///
         public int Blocks
         {
             get { return blocks; }
@@ -179,30 +250,30 @@ namespace Accord.Math.Optimization
         }
 
         /// <summary>
-        ///   Gets the approximate Hessian matrix of second derivatives 
-        ///   generated in the last algorithm iteration. The Hessian is 
-        ///   stored in the upper triangular part of this matrix. See 
+        ///   Gets the approximate Hessian matrix of second derivatives
+        ///   generated in the last algorithm iteration. The Hessian is
+        ///   stored in the upper triangular part of this matrix. See
         ///   remarks for details.
         ///   </summary>
-        ///   
+        ///
         /// <remarks>
         /// <para>
         ///   The Hessian needs only be upper-triangular, since
         ///   it is symmetric. The Cholesky decomposition will
         ///   make use of this fact and use the lower-triangular
         ///   portion to hold the decomposition, conserving memory</para>
-        ///   
+        ///
         /// <para>
         ///   Thus said, this property will hold the Hessian matrix
         ///   in the upper-triangular part of this matrix, and store
         ///   its Cholesky decomposition on its lower triangular part.</para>
-        ///   
+        ///
         /// <para>
         ///   Please note that this value is actually just an approximation to the
         ///   actual Hessian matrix using the outer Jacobian approximation (H ~ J'J).
         /// </para>
         /// </remarks>
-        ///  
+        ///
         public double[][] Hessian
         {
             get { return hessian; }
@@ -212,7 +283,7 @@ namespace Accord.Math.Optimization
         /// <summary>
         ///   Gets standard error for each parameter in the solution.
         /// </summary>
-        /// 
+        ///
         public double[] StandardErrors
         {
             get { return decomposition.InverseDiagonal().Sqrt(); }
@@ -222,15 +293,15 @@ namespace Accord.Math.Optimization
         /// Gets the value at the solution found. This should be
         /// the minimum value found for the objective function.
         /// </summary>
-        /// 
+        ///
         public double Value { get; set; }
 
         /// <summary>
         ///   Initializes a new instance of the <see cref="LevenbergMarquardt"/> class.
         /// </summary>
-        /// 
+        ///
         /// <param name="parameters">The number of free parameters in the optimization problem.</param>
-        /// 
+        ///
         public LevenbergMarquardt(int parameters)
         {
             this.numberOfParameters = parameters;
@@ -254,11 +325,11 @@ namespace Accord.Math.Optimization
         ///   minimizing the discrepancy between the generated outputs
         ///   and the expected outputs for a given set of input data.
         /// </summary>
-        /// 
+        ///
         /// <param name="inputs">A set of input data.</param>
-        /// <param name="outputs">The values associated with each 
+        /// <param name="outputs">The values associated with each
         ///   vector in the <paramref name="inputs"/> data.</param>
-        /// 
+        ///
         public double Minimize(double[][] inputs, double[] outputs)
         {
             double sumOfSquaredErrors = 0.0;
@@ -432,12 +503,12 @@ namespace Accord.Math.Optimization
         /// <summary>
         ///   Compute model error for a given data set.
         /// </summary>
-        /// 
+        ///
         /// <param name="input">The input points.</param>
         /// <param name="output">The output points.</param>
-        /// 
+        ///
         /// <returns>The sum of squared errors for the data.</returns>
-        /// 
+        ///
         public double ComputeError(double[][] input, double[] output)
         {
             double sumOfSquaredErrors = 0;
